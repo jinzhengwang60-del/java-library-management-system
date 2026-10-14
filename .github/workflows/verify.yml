@@ -1,0 +1,48 @@
+name: Build and verify library system
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: ['11', '17']
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-demo-only
+          MYSQL_ROOT_HOST: '%'
+          MYSQL_DATABASE: booksys
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci-demo-only"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    env:
+      BOOKSYS_DB_URL: jdbc:mysql://127.0.0.1:3306/booksys?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+      BOOKSYS_DB_USER: root
+      BOOKSYS_DB_PASSWORD: ci-demo-only
+      MYSQL_PWD: ci-demo-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: maven
+      - name: Prepare disposable demo database
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y mysql-client
+          mysql --protocol=tcp -h 127.0.0.1 -u root --default-character-set=utf8mb4 < sql/booksys.sql
+      - name: Build WAR and run 17 MySQL/Tomcat checks
+        run: mvn -B "-Dbooksys.integration=true" verify
+

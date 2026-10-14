@@ -1,0 +1,15 @@
+target/
+out/
+.idea/
+*.iml
+*.class
+*.log
+jdbc-local.properties
+.env
+.env.*
+!.env.example
+src/main/webapp/upload/*
+!src/main/webapp/upload/.gitkeep
+.tomcat/
+verification/
+
