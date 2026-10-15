@@ -16,11 +16,11 @@
 <div class="container">
     <!-- 搜索/筛选栏 -->
     <form action="${pageContext.request.contextPath}/book/list" method="get" class="filter-bar">
-        <input type="text" name="keyword" value="${keyword}" placeholder="搜索书名、作者或ISBN...">
+        <input type="text" name="keyword" value="${fn:escapeXml(keyword)}" placeholder="搜索书名、作者或ISBN...">
         <select name="categoryId">
             <option value="">所有分类</option>
             <c:forEach var="cat" items="${categories}">
-                <option value="${cat.id}" ${selectedCategoryId == cat.id ? 'selected' : ''}>${cat.name}</option>
+                <option value="${cat.id}" ${selectedCategoryId == cat.id ? 'selected' : ''}>${fn:escapeXml(cat.name)}</option>
             </c:forEach>
         </select>
         <button type="submit" class="btn btn-primary">🔍 搜索</button>
@@ -33,7 +33,7 @@
            class="${empty selectedCategoryId ? 'active' : ''}">全部</a>
         <c:forEach var="cat" items="${categories}">
             <a href="${pageContext.request.contextPath}/book/list?categoryId=${cat.id}"
-               class="${selectedCategoryId == cat.id ? 'active' : ''}">${cat.name}</a>
+               class="${selectedCategoryId == cat.id ? 'active' : ''}">${fn:escapeXml(cat.name)}</a>
         </c:forEach>
     </div>
 
@@ -52,15 +52,15 @@
                             <a href="${pageContext.request.contextPath}/book/detail?id=${book.id}"
                                style="color:inherit;">
                                 <div class="book-card">
-                                    <img src="${pageContext.request.contextPath}${book.cover}"
-                                         class="book-card-img" alt="${book.title}"
+                                    <img src="${pageContext.request.contextPath}${fn:escapeXml(book.cover)}"
+                                         class="book-card-img" alt="${fn:escapeXml(book.title)}"
                                          onerror="this.src='${pageContext.request.contextPath}/images/default-book.png'">
                                     <div class="book-card-body">
-                                        <div class="book-card-title">${book.title}</div>
-                                        <div class="book-card-meta">作者：${book.author}</div>
+                                        <div class="book-card-title">${fn:escapeXml(book.title)}</div>
+                                        <div class="book-card-meta">作者：${fn:escapeXml(book.author)}</div>
                                         <div class="book-card-meta">
                                             <c:if test="${not empty book.categoryName}">
-                                                <span class="tag">${book.categoryName}</span>
+                                                <span class="tag">${fn:escapeXml(book.categoryName)}</span>
                                             </c:if>
                                         </div>
                                         <div class="book-card-price">
@@ -77,46 +77,7 @@
                     </div>
 
                     <!-- 分页 -->
-                    <div class="pagination">
-                        <c:set var="pn" value="${pageBean.pageNum}"/>
-                        <c:set var="tp" value="${pageBean.totalPages}"/>
-                        <c:set var="qs" value=""/>
-                        <c:if test="${not empty keyword}">
-                            <c:set var="qs" value="${qs}&keyword=${keyword}"/>
-                        </c:if>
-                        <c:if test="${not empty selectedCategoryId}">
-                            <c:set var="qs" value="${qs}&categoryId=${selectedCategoryId}"/>
-                        </c:if>
-
-                        <c:choose>
-                            <c:when test="${pn > 1}">
-                                <a href="?pageNum=${pn-1}${qs}">上一页</a>
-                            </c:when>
-                            <c:otherwise><span class="disabled">上一页</span></c:otherwise>
-                        </c:choose>
-
-                        <c:forEach var="i" begin="1" end="${tp}">
-                            <c:choose>
-                                <c:when test="${i == pn}">
-                                    <span class="current">${i}</span>
-                                </c:when>
-                                <c:otherwise>
-                                    <a href="?pageNum=${i}${qs}">${i}</a>
-                                </c:otherwise>
-                            </c:choose>
-                        </c:forEach>
-
-                        <c:choose>
-                            <c:when test="${pn < tp}">
-                                <a href="?pageNum=${pn+1}${qs}">下一页</a>
-                            </c:when>
-                            <c:otherwise><span class="disabled">下一页</span></c:otherwise>
-                        </c:choose>
-
-                        <span style="margin-left:10px; color:#909399;">
-                            共 ${pageBean.totalCount} 条 / ${tp} 页
-                        </span>
-                    </div>
+                    <c:set var="paginationPath" value="/book/list" scope="request"/><jsp:include page="_pagination.jsp"/>
                 </c:otherwise>
             </c:choose>
         </div>
@@ -131,7 +92,7 @@
                         <li>
                             <span>
                                 <span class="rank">${st.count}</span>
-                                <a href="${pageContext.request.contextPath}/book/detail?id=${top.id}">${top.title}</a>
+                                <a href="${pageContext.request.contextPath}/book/detail?id=${top.id}">${fn:escapeXml(top.title)}</a>
                             </span>
                             <span class="count">${top.clickCount}</span>
                         </li>
@@ -151,7 +112,7 @@
                         <ul class="sidebar-list">
                             <c:forEach var="u" items="${onlineUsers}">
                                 <li>
-                                    <span><span class="online-dot"></span>${u.username}</span>
+                                    <span><span class="online-dot"></span>${fn:escapeXml(u.username)}</span>
                                     <c:if test="${u.role == 1}">
                                         <span class="badge-admin">管理员</span>
                                     </c:if>

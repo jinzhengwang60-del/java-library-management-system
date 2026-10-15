@@ -12,4 +12,6 @@ src/main/webapp/upload/*
 !src/main/webapp/upload/.gitkeep
 .tomcat/
 verification/
+booksys-data/
+/uploads/
 

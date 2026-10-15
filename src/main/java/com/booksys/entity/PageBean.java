@@ -1,41 +1,37 @@
 package com.booksys.entity;
 
+import java.util.Collections;
 import java.util.List;
 
-/**
- * 分页工具类（封装分页参数和数据）
- */
 public class PageBean<T> {
-    private int pageNum;        // 当前页
-    private int pageSize;       // 每页大小
-    private int totalCount;     // 总记录数
-    private int totalPages;     // 总页数
-    private List<T> list;       // 当前页数据
+    private int pageNum = 1;
+    private int pageSize = 10;
+    private int totalCount;
+    private List<T> list = Collections.emptyList();
 
     public PageBean() {}
-
     public PageBean(int pageNum, int pageSize, int totalCount) {
-        this.pageNum = pageNum;
-        this.pageSize = pageSize;
-        this.totalCount = totalCount;
-        this.totalPages = (totalCount + pageSize - 1) / pageSize;
+        setPageSize(pageSize);
+        setTotalCount(totalCount);
+        setPageNum(pageNum);
     }
 
     public int getPageNum() { return pageNum; }
-    public void setPageNum(int pageNum) { this.pageNum = pageNum; }
-
+    public void setPageNum(int value) { pageNum = Math.max(1, Math.min(value, getTotalPages())); }
     public int getPageSize() { return pageSize; }
-    public void setPageSize(int pageSize) { this.pageSize = pageSize; }
-
-    public int getTotalCount() { return totalCount; }
-    public void setTotalCount(int totalCount) {
-        this.totalCount = totalCount;
-        this.totalPages = (totalCount + pageSize - 1) / pageSize;
+    public void setPageSize(int value) {
+        if (value < 1 || value > 100) throw new IllegalArgumentException("Page size must be between 1 and 100");
+        pageSize = value;
+        setPageNum(pageNum);
     }
-
-    public int getTotalPages() { return totalPages; }
-    public void setTotalPages(int totalPages) { this.totalPages = totalPages; }
-
+    public int getTotalCount() { return totalCount; }
+    public void setTotalCount(int value) {
+        if (value < 0) throw new IllegalArgumentException("Total count cannot be negative");
+        totalCount = value;
+        setPageNum(pageNum);
+    }
+    public int getTotalPages() { return Math.max(1, (int) (((long) totalCount + pageSize - 1) / pageSize)); }
+    public int getOffset() { return (pageNum - 1) * pageSize; }
     public List<T> getList() { return list; }
-    public void setList(List<T> list) { this.list = list; }
+    public void setList(List<T> value) { list = value == null ? Collections.emptyList() : value; }
 }

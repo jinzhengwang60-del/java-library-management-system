@@ -1,3 +1,4 @@
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
@@ -17,10 +18,10 @@
         <div class="card-title">👤 个人中心</div>
 
         <div style="display:flex; align-items:center; gap:24px; margin-bottom:24px;">
-            <img src="${pageContext.request.contextPath}${user.avatar}" class="avatar avatar-lg"
+            <img src="${pageContext.request.contextPath}${fn:escapeXml(user.avatar)}" class="avatar avatar-lg"
                  onerror="this.src='${pageContext.request.contextPath}/images/default-avatar.png'">
             <div>
-                <h2>${user.username}
+                <h2>${fn:escapeXml(user.username)}
                     <c:if test="${user.role == 1}">
                         <span class="badge-admin">管理员</span>
                     </c:if>
@@ -33,26 +34,27 @@
 
         <form action="${pageContext.request.contextPath}/user/update" method="post"
               enctype="multipart/form-data">
+            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
 
             <div class="form-row">
                 <div class="form-group">
                     <label>用户名</label>
-                    <input type="text" class="form-control" value="${user.username}" disabled>
+                    <input type="text" class="form-control" value="${fn:escapeXml(user.username)}" disabled>
                 </div>
                 <div class="form-group">
                     <label>真实姓名</label>
-                    <input type="text" name="realName" class="form-control" value="${user.realName}">
+                    <input type="text" name="realName" class="form-control" value="${fn:escapeXml(user.realName)}">
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="form-group">
                     <label>邮箱</label>
-                    <input type="email" name="email" class="form-control" value="${user.email}">
+                    <input type="email" name="email" class="form-control" value="${fn:escapeXml(user.email)}">
                 </div>
                 <div class="form-group">
                     <label>手机号</label>
-                    <input type="text" name="phone" class="form-control" value="${user.phone}"
+                    <input type="text" name="phone" class="form-control" value="${fn:escapeXml(user.phone)}"
                            pattern="1[3-9]\d{9}">
                 </div>
             </div>
@@ -70,24 +72,24 @@
             <div class="form-group">
                 <label>所在地区</label>
                 <div class="region-row">
-                    <select name="province" id="province" class="form-control">
+                    <select name="province" id="province" class="form-control" data-selected="${fn:escapeXml(user.province)}">
                         <option value="">请选择省份</option>
                     </select>
-                    <select name="city" id="city" class="form-control">
+                    <select name="city" id="city" class="form-control" data-selected="${fn:escapeXml(user.city)}">
                         <option value="">请选择城市</option>
                     </select>
-                    <select name="district" id="district" class="form-control">
+                    <select name="district" id="district" class="form-control" data-selected="${fn:escapeXml(user.district)}">
                         <option value="">请选择区/县</option>
                     </select>
                 </div>
                 <div class="form-tip">
-                    当前：${user.province} ${user.city} ${user.district}
+                    当前：${fn:escapeXml(user.province)} ${fn:escapeXml(user.city)} ${fn:escapeXml(user.district)}
                 </div>
             </div>
 
             <div class="form-group">
                 <label>详细地址</label>
-                <input type="text" name="address" class="form-control" value="${user.address}">
+                <input type="text" name="address" class="form-control" value="${fn:escapeXml(user.address)}">
             </div>
 
             <div class="form-group">
@@ -104,9 +106,9 @@
 
 <script>
     const ctx = '${pageContext.request.contextPath}';
-    const currentProvince = '${user.province}';
-    const currentCity = '${user.city}';
-    const currentDistrict = '${user.district}';
+    const currentProvince = document.getElementById('province').dataset.selected;
+    const currentCity = document.getElementById('city').dataset.selected;
+    const currentDistrict = document.getElementById('district').dataset.selected;
 
     function loadRegion(level, parent, selectEl, placeholder, selected, next) {
         selectEl.innerHTML = '<option value="">' + placeholder + '</option>';

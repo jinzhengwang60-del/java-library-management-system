@@ -1,6 +1,7 @@
 package com.booksys.servlet;
 
 import com.booksys.entity.User;
+import com.booksys.util.FormValues;
 import com.booksys.service.IUserService;
 import com.booksys.service.impl.UserServiceImpl;
 
@@ -32,11 +33,12 @@ public class RegisterServlet extends HttpServlet {
         String address = request.getParameter("address");
 
         // 服务端二次校验
-        if (username == null || username.length() < 3) {
+        if (username == null || username.length() < 3 || username.length() > 50
+                || !username.matches("[\\p{L}\\p{N}_.-]+")) {
             forwardError(request, response, "用户名长度至少3位");
             return;
         }
-        if (password == null || password.length() < 6) {
+        if (password == null || password.length() < 6 || password.length() > 128) {
             forwardError(request, response, "密码长度至少6位");
             return;
         }
@@ -53,6 +55,22 @@ public class RegisterServlet extends HttpServlet {
             return;
         }
 
+        try {
+            email = FormValues.text(email, "邮箱", 100, false);
+            phone = FormValues.text(phone, "手机", 20, false);
+            realName = FormValues.text(realName, "姓名", 50, false);
+            gender = FormValues.text(gender, "性别", 10, false);
+            province = FormValues.text(province, "省份", 50, false);
+            city = FormValues.text(city, "城市", 50, false);
+            district = FormValues.text(district, "区县", 50, false);
+            address = FormValues.text(address, "地址", 200, false);
+            if (email != null && !email.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+"))
+                throw new IllegalArgumentException("邮箱格式无效");
+            if (phone != null && !phone.matches("[0-9+() -]{3,20}"))
+                throw new IllegalArgumentException("手机号码格式无效");
+        } catch (IllegalArgumentException e) {
+            forwardError(request, response, e.getMessage()); return;
+        }
         User u = new User();
         u.setUsername(username);
         u.setPassword(password);

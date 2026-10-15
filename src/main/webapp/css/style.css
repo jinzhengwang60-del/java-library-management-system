@@ -51,6 +51,7 @@ a:hover { color: #66b1ff; }
 .nav-user { display: flex; align-items: center; gap: 16px; }
 .nav-user span { color: #ecf0f1; }
 .btn-link { color: #ecf0f1 !important; padding: 6px 12px; border-radius: 4px; }
+button.btn-link { background: transparent; border: 0; font: inherit; cursor: pointer; }
 .btn-link:hover { background: rgba(255,255,255,0.1); color: #fff !important; }
 .badge-admin {
     background: #f39c12;

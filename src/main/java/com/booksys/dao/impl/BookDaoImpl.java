@@ -21,7 +21,7 @@ public class BookDaoImpl implements IBookDao {
     private static final String SELECT_BASE =
             "SELECT b.id, b.book_no AS bookNo, b.title, b.author, b.publisher, b.publish_date AS publishDate, " +
                     "b.isbn, b.category_id AS categoryId, c.name AS categoryName, b.price, b.stock, " +
-                    "b.cover, b.description, b.click_count AS clickCount, b.status, b.create_time AS createTime " +
+                    "b.cover, b.description, b.click_count AS clickCount, b.status, b.version, b.create_time AS createTime " +
                     "FROM t_book b LEFT JOIN t_category c ON b.category_id = c.id ";
 
     private final QueryRunner qr = DbUtil.getQueryRunner();
@@ -46,7 +46,7 @@ public class BookDaoImpl implements IBookDao {
     @Override
     public int deleteById(Integer id) {
         try {
-            return qr.update("DELETE FROM t_book WHERE id=?", id);
+            return qr.update("UPDATE t_book SET status=0,version=version+1 WHERE id=? AND status=1", id);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -54,13 +54,13 @@ public class BookDaoImpl implements IBookDao {
 
     @Override
     public int update(Book book) {
-        String sql = "UPDATE t_book SET book_no=?,title=?,author=?,publisher=?,publish_date=?,isbn=?,category_id=?,price=?,stock=?,cover=?,description=?,status=? WHERE id=?";
+        String sql = "UPDATE t_book SET book_no=?,title=?,author=?,publisher=?,publish_date=?,isbn=?,category_id=?,price=?,stock=?,cover=?,description=?,status=?,version=version+1 WHERE id=? AND version=?";
         try {
             return qr.update(sql,
                     book.getBookNo(), book.getTitle(), book.getAuthor(), book.getPublisher(),
                     book.getPublishDate(), book.getIsbn(), book.getCategoryId(),
                     book.getPrice(), book.getStock(), book.getCover(), book.getDescription(),
-                    book.getStatus(), book.getId());
+                    book.getStatus(), book.getId(), book.getVersion());
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -149,7 +149,7 @@ public class BookDaoImpl implements IBookDao {
     @Override
     public int decreaseStock(Integer id) {
         try {
-            return qr.update("UPDATE t_book SET stock=stock-1 WHERE id=? AND stock>0", id);
+            return qr.update("UPDATE t_book SET stock=stock-1,version=version+1 WHERE id=? AND stock>0", id);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -158,7 +158,7 @@ public class BookDaoImpl implements IBookDao {
     @Override
     public int increaseStock(Integer id) {
         try {
-            return qr.update("UPDATE t_book SET stock=stock+1 WHERE id=?", id);
+            return qr.update("UPDATE t_book SET stock=stock+1,version=version+1 WHERE id=?", id);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }

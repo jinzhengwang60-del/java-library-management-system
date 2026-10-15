@@ -2,7 +2,7 @@
 
 使用 **JSP、Servlet、JDBC 和 MySQL** 的图书管理课程项目。提供读者与管理员两种角色，支持注册登录、图书查询、借阅归还和后台管理。
 
-发布版本保留原项目的分层结构，整理了构建与配置方式，并修正借还书的事务一致性、归还权限和注册页面地址接口问题。仓库只包含源码、必要资源、虚构演示数据和验证代码。
+优化版本保留原项目的分层结构，补全借还书事务、库存并发保护、历史记录保留、密码升级和安全图片上传。仓库只包含源码、必要资源、虚构演示数据和验证代码。
 
 ## 功能与结构
 
@@ -17,18 +17,19 @@ src/main/java/com/booksys/
 ├── dao/           数据访问接口与实现：DBUtils + C3P0
 ├── service/       登录、图书管理和借还书业务
 ├── servlet/       HTTP 路由
-├── filter/        登录检查与编码处理
+├── filter/        登录、账号状态、表单凭证与编码处理
 ├── listener/      在线用户记录与连接池关闭
-└── util/          数据库配置、验证码等工具
+└── util/          数据库配置与事务、密码、图片及表单工具
 src/main/webapp/   JSP、JSTL、样式与默认图标
 sql/booksys.sql   建表与虚构演示数据
 config/           数据库配置示例
-src/test/java/    MySQL + Tomcat 集成测试
+src/test/java/    单元测试与 MySQL + Tomcat 集成测试
+sql/migrations/   已有数据库的增量升级脚本
 ~~~
 
 ~~~mermaid
 flowchart LR
-    Browser[浏览器] --> Filter[登录与编码过滤器]
+    Browser[浏览器] --> Filter[登录、表单凭证与编码过滤器]
     Filter --> Servlet[Servlet]
     Servlet --> Service[Service 业务层]
     Service --> DAO[DAO / DBUtils]
@@ -64,6 +65,8 @@ CREATE USER 'booksys_app'@'127.0.0.1' IDENTIFIED BY 'YOUR_LOCAL_PASSWORD';
 GRANT SELECT, INSERT, UPDATE, DELETE ON booksys.* TO 'booksys_app'@'127.0.0.1';
 ~~~
 
+已有初始发布版本数据库时，不要重复导入初始化脚本。先备份并停止应用，再执行 `SOURCE sql/migrations/001_harden_schema.sql;`，然后部署新 WAR。升级只扩展密码字段、增加版本列和索引，保留业务数据；详细步骤和旧上传图片的处理见 [代码理解与优化说明](docs/optimization.md)。
+
 ### 2. 设置私有数据库配置
 
 Windows PowerShell：
@@ -83,6 +86,10 @@ export BOOKSYS_CONFIG="$(pwd)/jdbc-local.properties"
 ~~~
 
 jdbc-local.properties 已被 .gitignore 排除，不会打包到 WAR。也可以设置 BOOKSYS_DB_URL、BOOKSYS_DB_USER、BOOKSYS_DB_PASSWORD；环境变量优先于文件中的值。配置示例用于本地演示，部署到其他环境时请自行配置连接地址与 TLS 参数。
+
+头像与封面保存在 WAR 外。可在私有文件中设置 `upload.directory=C:/booksys-data/uploads`，或设置 `BOOKSYS_UPLOAD_DIR`；默认使用 Tomcat 的 `catalina.base/booksys-data/uploads`。
+
+“记住我”默认使用每次启动生成的签名密钥，重启后需要重新登录。需要跨重启保留时，在私有文件中设置 `remember.key`，值为至少 32 字节随机数的 Base64 编码，也可用 `BOOKSYS_REMEMBER_KEY`。密钥不要提交到 Git。
 
 ### 3. 编译并部署
 
@@ -113,7 +120,7 @@ http://localhost:8080/booksys/
 
 ## 验证
 
-默认 mvn package 会编译并生成 WAR，**MySQL 集成测试默认跳过**，避免意外连接或改动使用者的数据库。
+默认 mvn package 会执行 17 项不依赖数据库的单元测试、编译并生成 WAR，**MySQL 集成测试默认跳过**，避免意外连接或改动使用者的数据库。
 
 完整验证需要独立的 MySQL 演示数据库，先导入上面的脚本，并赋予测试账号该数据库的完整权限。测试创建专用测试书籍、虚构读者和故障注入触发器，结束后清理这些记录。不要把测试指向真实业务数据库。
 
@@ -131,20 +138,24 @@ mvn "-Dbooksys.integration=true" "-Dbooksys.config=/absolute/path/jdbc-local.pro
 
 测试自动启动只监听本机、使用随机端口的嵌入式 Tomcat。验证码测试直接读取测试服务器内存中的 Session，没有新增绕过验证码的公开接口。
 
-17 项测试覆盖登录、注册、地址接口、权限、图书查询与搜索、正常借还书、重复借阅、无库存、越权归还、最后一本书的并发借阅，以及借阅或归还失败时的事务回滚。
+完整验证包含 **17 项单元测试 + 38 项 HTTP/MySQL 集成测试，共 55 项**：覆盖密码与签名、分页边界、图片解码和限制、表单校验、登录注册、权限、借还书并发与回滚，以及旧编辑页面、CSRF、页面转义、停用账号、下架图书、多会话在线状态等回归场景。
 
-已在 **Windows / JDK 11 / MySQL 8.0 / 嵌入式 Tomcat 9.0.123** 上实际运行并通过全部 17 项测试，详见 [验证记录](docs/validation.md)。GitHub Actions 会使用独立 MySQL 容器复跑测试，其他环境的结果以具体运行记录为准。
+已在 **Windows / JDK 11 / MySQL 8.0 / 嵌入式 Tomcat 9.0.123** 上实际运行并通过全部 55 项测试，WAR 打包成功。旧结构迁移到新结构的脚本也已在独立测试库中连续执行两次，并验证所有原字段数据保持一致。详见 [验证记录](docs/validation.md)。
 
-## 发布版本的调整
+GitHub Actions 配置了 Java 11 / 17 与独立 MySQL 容器；本地本轮结果不代表尚未执行的新提交远端结果。
 
-- 数据库密码改为外部私有文件或环境变量配置。
-- 借阅与归还在同一事务中更新记录和库存，对竞争同一本书的请求使用行锁。
-- 普通读者只能归还自己的借阅记录，管理员可以管理全部记录。
-- 注册页面的地址选择接口允许未登录访问。
-- 应用停止时关闭数据库连接池。
-- 不提交 IDE 设置、编译产物、依赖 JAR、原始提交压缩包和课程报告。
+## 代码理解与主要改进
 
-身份验证仍沿用课程实现的 MD5 摘要与记住登录状态机制。本次未将它改造为生产级认证系统，也未对上传文件和全站 CSRF 防护进行专项验证。
+- 借还书使用统一事务和行锁；编辑图书检查版本，防止旧页面覆盖新库存。
+- 图书下架、读者停用保留借阅历史，下架图书仍可归还。
+- 新密码使用 PBKDF2-HMAC-SHA256，旧 MD5 在正确登录后自动升级。
+- 记住登录状态使用七天有效的签名凭证；密码摘要不进入 Cookie。
+- POST 表单校验会话凭证，页面输出转义，退出登录使用 POST。
+- 图片实际解码后重新编码，随机命名并保存在 WAR 外，失败保存清理本次新文件。
+- 共用分页组件和配置读取，修正页码溢出与多会话在线统计。
+- 私有配置、IDE 设置、编译产物、依赖 JAR 和原课程压缩包均不入库。
+
+阅读 [代码理解与优化说明](docs/optimization.md) 可以从一次借书的数据流开始理解源码，并查看具体路径、升级方法和验证边界。
 
 ## 参考文档
 

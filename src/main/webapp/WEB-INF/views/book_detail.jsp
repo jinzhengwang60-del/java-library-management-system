@@ -1,3 +1,4 @@
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
@@ -5,7 +6,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>${book.title} - 图书详情</title>
+    <title>${fn:escapeXml(book.title)} - 图书详情</title>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css">
 </head>
 <body>
@@ -15,23 +16,23 @@
 <div class="container">
     <div class="book-detail">
         <div>
-            <img src="${pageContext.request.contextPath}${book.cover}" class="book-detail-cover"
-                 alt="${book.title}"
+            <img src="${pageContext.request.contextPath}${fn:escapeXml(book.cover)}" class="book-detail-cover"
+                 alt="${fn:escapeXml(book.title)}"
                  onerror="this.src='${pageContext.request.contextPath}/images/default-book.png'">
         </div>
         <div class="book-detail-info">
-            <h1>${book.title}</h1>
-            <div class="meta-row"><span class="meta-label">编号：</span>${book.bookNo}</div>
-            <div class="meta-row"><span class="meta-label">作者：</span>${book.author}</div>
-            <div class="meta-row"><span class="meta-label">出版社：</span>${book.publisher}</div>
+            <h1>${fn:escapeXml(book.title)}</h1>
+            <div class="meta-row"><span class="meta-label">编号：</span>${fn:escapeXml(book.bookNo)}</div>
+            <div class="meta-row"><span class="meta-label">作者：</span>${fn:escapeXml(book.author)}</div>
+            <div class="meta-row"><span class="meta-label">出版社：</span>${fn:escapeXml(book.publisher)}</div>
             <div class="meta-row">
                 <span class="meta-label">出版日期：</span>
                 <fmt:formatDate value="${book.publishDate}" pattern="yyyy-MM-dd"/>
             </div>
-            <div class="meta-row"><span class="meta-label">ISBN：</span>${book.isbn}</div>
+            <div class="meta-row"><span class="meta-label">ISBN：</span>${fn:escapeXml(book.isbn)}</div>
             <div class="meta-row">
                 <span class="meta-label">分类：</span>
-                <span class="tag">${book.categoryName}</span>
+                <span class="tag">${fn:escapeXml(book.categoryName)}</span>
             </div>
             <div class="meta-row">
                 <span class="meta-label">库存：</span>
@@ -55,6 +56,7 @@
                 </c:when>
                 <c:when test="${book.stock > 0}">
                     <form action="${pageContext.request.contextPath}/borrow/do" method="post" style="display:inline;">
+                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                         <input type="hidden" name="bookId" value="${book.id}">
                         <button type="submit" class="btn btn-success btn-lg">📖 借阅此书</button>
                     </form>
@@ -68,15 +70,16 @@
                 <a href="${pageContext.request.contextPath}/book/edit?id=${book.id}"
                    class="btn btn-warning btn-lg">✏ 编辑</a>
                 <form action="${pageContext.request.contextPath}/book/delete" method="post"
-                      style="display:inline;" onsubmit="return confirm('确认删除？');">
+                      style="display:inline;" onsubmit="return confirm('确认下架？');">
+                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                     <input type="hidden" name="id" value="${book.id}">
-                    <button type="submit" class="btn btn-danger btn-lg">🗑 删除</button>
+                    <button type="submit" class="btn btn-danger btn-lg">🗑 下架</button>
                 </form>
             </c:if>
 
             <div class="book-detail-desc">
                 <strong>📖 图书简介</strong><br><br>
-                ${empty book.description ? '暂无简介' : book.description}
+                ${empty book.description ? '暂无简介' : fn:escapeXml(book.description)}
             </div>
         </div>
     </div>

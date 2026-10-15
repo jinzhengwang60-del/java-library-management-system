@@ -11,7 +11,7 @@ USE booksys;
 CREATE TABLE t_user (
     id INT PRIMARY KEY AUTO_INCREMENT COMMENT '用户ID',
     username VARCHAR(50) NOT NULL UNIQUE COMMENT '用户名',
-    password VARCHAR(64) NOT NULL COMMENT '密码（MD5加密）',
+    password VARCHAR(255) NOT NULL COMMENT '密码摘要：新用户 PBKDF2，兼容旧 MD5',
     real_name VARCHAR(50) COMMENT '真实姓名',
     email VARCHAR(100) UNIQUE COMMENT '邮箱',
     phone VARCHAR(20) UNIQUE COMMENT '手机号',
@@ -48,9 +48,11 @@ CREATE TABLE t_book (
     stock INT DEFAULT 0 COMMENT '库存数量',
     cover VARCHAR(200) DEFAULT '/images/default-book.png' COMMENT '封面路径',
     description TEXT COMMENT '图书简介',
+    version INT NOT NULL DEFAULT 0 COMMENT '编辑版本号',
     click_count INT DEFAULT 0 COMMENT '点击次数',
     status TINYINT DEFAULT 1 COMMENT '状态：1-上架，0-下架',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '入库时间',
+    INDEX idx_book_status_click (status, click_count),
     FOREIGN KEY (category_id) REFERENCES t_category(id) ON DELETE SET NULL
 ) ENGINE=InnoDB COMMENT='图书表';
 
@@ -63,6 +65,8 @@ CREATE TABLE t_borrow (
     due_date DATETIME COMMENT '应还时间',
     return_date DATETIME COMMENT '实际归还时间',
     status TINYINT DEFAULT 0 COMMENT '状态：0-借阅中，1-已归还',
+    INDEX idx_borrow_active (user_id, book_id, status),
+    INDEX idx_borrow_user_date (user_id, borrow_date),
     FOREIGN KEY (user_id) REFERENCES t_user(id) ON DELETE CASCADE,
     FOREIGN KEY (book_id) REFERENCES t_book(id) ON DELETE CASCADE
 ) ENGINE=InnoDB COMMENT='借阅记录表';

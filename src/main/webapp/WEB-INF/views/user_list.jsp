@@ -1,3 +1,4 @@
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
@@ -36,14 +37,14 @@
                 <tr>
                     <td>${u.id}</td>
                     <td>
-                        <img src="${pageContext.request.contextPath}${u.avatar}" class="avatar avatar-sm"
+                        <img src="${pageContext.request.contextPath}${fn:escapeXml(u.avatar)}" class="avatar avatar-sm"
                              onerror="this.src='${pageContext.request.contextPath}/images/default-avatar.png'">
                     </td>
-                    <td>${u.username}</td>
-                    <td>${u.realName}</td>
-                    <td>${u.email}</td>
-                    <td>${u.phone}</td>
-                    <td>${u.province} ${u.city}</td>
+                    <td>${fn:escapeXml(u.username)} <c:if test="${u.status == 0}"><span class="tag">已停用</span></c:if></td>
+                    <td>${fn:escapeXml(u.realName)}</td>
+                    <td>${fn:escapeXml(u.email)}</td>
+                    <td>${fn:escapeXml(u.phone)}</td>
+                    <td>${fn:escapeXml(u.province)} ${fn:escapeXml(u.city)}</td>
                     <td>
                         <c:choose>
                             <c:when test="${u.role == 1}">
@@ -56,12 +57,13 @@
                     </td>
                     <td><fmt:formatDate value="${u.createTime}" pattern="yyyy-MM-dd"/></td>
                     <td class="col-actions">
-                        <c:if test="${u.id != sessionScope.loginUser.id && u.role != 1}">
+                        <c:if test="${u.id != sessionScope.loginUser.id && u.role != 1 && u.status == 1}">
                             <form action="${pageContext.request.contextPath}/user/delete"
                                   method="post" style="display:inline;"
-                                  onsubmit="return confirm('确认删除该用户？该用户的所有借阅记录也将被删除');">
+                                  onsubmit="return confirm('确认停用该用户？借阅记录会保留');">
+                                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                 <input type="hidden" name="id" value="${u.id}">
-                                <button type="submit" class="btn btn-danger btn-sm">删除</button>
+                                <button type="submit" class="btn btn-danger btn-sm">停用</button>
                             </form>
                         </c:if>
                     </td>
@@ -70,26 +72,7 @@
             </tbody>
         </table>
 
-        <div class="pagination">
-            <c:set var="pn" value="${pageBean.pageNum}"/>
-            <c:set var="tp" value="${pageBean.totalPages}"/>
-
-            <c:choose>
-                <c:when test="${pn > 1}"><a href="?pageNum=${pn-1}">上一页</a></c:when>
-                <c:otherwise><span class="disabled">上一页</span></c:otherwise>
-            </c:choose>
-            <c:forEach var="i" begin="1" end="${tp}">
-                <c:choose>
-                    <c:when test="${i == pn}"><span class="current">${i}</span></c:when>
-                    <c:otherwise><a href="?pageNum=${i}">${i}</a></c:otherwise>
-                </c:choose>
-            </c:forEach>
-            <c:choose>
-                <c:when test="${pn < tp}"><a href="?pageNum=${pn+1}">下一页</a></c:when>
-                <c:otherwise><span class="disabled">下一页</span></c:otherwise>
-            </c:choose>
-            <span style="margin-left:10px; color:#909399;">共 ${pageBean.totalCount} 个用户</span>
-        </div>
+        <c:set var="paginationPath" value="/user/list" scope="request"/><jsp:include page="_pagination.jsp"/>
     </div>
 </div>
 

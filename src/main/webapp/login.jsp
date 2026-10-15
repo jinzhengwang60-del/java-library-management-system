@@ -1,3 +1,4 @@
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <!DOCTYPE html>
@@ -16,17 +17,18 @@
         </div>
 
         <c:if test="${not empty error}">
-            <div class="alert alert-error">${error}</div>
+            <div class="alert alert-error">${fn:escapeXml(error)}</div>
         </c:if>
         <c:if test="${not empty msg}">
-            <div class="alert alert-success">${msg}</div>
+            <div class="alert alert-success">${fn:escapeXml(msg)}</div>
         </c:if>
 
         <form action="${pageContext.request.contextPath}/login" method="post" id="loginForm">
+            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
             <div class="form-group">
                 <label>用户名</label>
                 <input type="text" name="username" class="form-control"
-                       value="${username}" required autofocus placeholder="请输入用户名">
+                       value="${fn:escapeXml(username)}" required autofocus placeholder="请输入用户名">
             </div>
             <div class="form-group">
                 <label>密码</label>

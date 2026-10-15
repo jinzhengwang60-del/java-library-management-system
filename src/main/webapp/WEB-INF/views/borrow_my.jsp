@@ -1,3 +1,4 @@
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
@@ -69,6 +70,7 @@
                                     <form action="${pageContext.request.contextPath}/borrow/return"
                                           method="post" style="display:inline;"
                                           onsubmit="return confirm('确认归还？');">
+                                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                         <input type="hidden" name="id" value="${b.id}">
                                         <button type="submit" class="btn btn-primary btn-sm">归还</button>
                                     </form>
@@ -80,25 +82,7 @@
                 </table>
 
                 <!-- 分页 -->
-                <div class="pagination">
-                    <c:set var="pn" value="${pageBean.pageNum}"/>
-                    <c:set var="tp" value="${pageBean.totalPages}"/>
-
-                    <c:choose>
-                        <c:when test="${pn > 1}"><a href="?pageNum=${pn-1}">上一页</a></c:when>
-                        <c:otherwise><span class="disabled">上一页</span></c:otherwise>
-                    </c:choose>
-                    <c:forEach var="i" begin="1" end="${tp}">
-                        <c:choose>
-                            <c:when test="${i == pn}"><span class="current">${i}</span></c:when>
-                            <c:otherwise><a href="?pageNum=${i}">${i}</a></c:otherwise>
-                        </c:choose>
-                    </c:forEach>
-                    <c:choose>
-                        <c:when test="${pn < tp}"><a href="?pageNum=${pn+1}">下一页</a></c:when>
-                        <c:otherwise><span class="disabled">下一页</span></c:otherwise>
-                    </c:choose>
-                </div>
+                <c:set var="paginationPath" value="/borrow/my" scope="request"/><jsp:include page="_pagination.jsp"/>
             </c:otherwise>
         </c:choose>
     </div>

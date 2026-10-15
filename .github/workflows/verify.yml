@@ -43,6 +43,6 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y mysql-client
           mysql --protocol=tcp -h 127.0.0.1 -u root --default-character-set=utf8mb4 < sql/booksys.sql
-      - name: Build WAR and run 17 MySQL/Tomcat checks
+      - name: Build WAR and run unit and MySQL/Tomcat checks
         run: mvn -B "-Dbooksys.integration=true" verify
 

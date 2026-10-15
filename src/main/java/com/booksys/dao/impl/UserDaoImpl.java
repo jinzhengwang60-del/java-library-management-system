@@ -47,7 +47,7 @@ public class UserDaoImpl implements IUserDao {
     @Override
     public int deleteById(Integer id) {
         try {
-            return qr.update("DELETE FROM t_user WHERE id=?", id);
+            return qr.update("UPDATE t_user SET status=0 WHERE id=? AND role<>1 AND status=1", id);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -85,13 +85,11 @@ public class UserDaoImpl implements IUserDao {
     }
 
     @Override
-    public User findByUsernameAndPassword(String username, String password) {
+    public int updatePasswordIfMatch(Integer id, String previous, String replacement) {
         try {
-            return qr.query(SELECT_ALL + " WHERE username=? AND password=? AND status=1",
-                    new BeanHandler<>(User.class), username, password);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+            return qr.update("UPDATE t_user SET password=? WHERE id=? AND password=? AND status=1",
+                    replacement, id, previous);
+        } catch (SQLException e) { throw new RuntimeException(e); }
     }
 
     @Override

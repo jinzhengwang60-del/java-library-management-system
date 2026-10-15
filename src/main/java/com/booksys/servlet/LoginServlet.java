@@ -4,7 +4,6 @@ import com.booksys.entity.User;
 import com.booksys.filter.RememberMeHelper;
 import com.booksys.service.IUserService;
 import com.booksys.service.impl.UserServiceImpl;
-import com.booksys.util.MD5Util;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -53,11 +52,14 @@ public class LoginServlet extends HttpServlet {
             return;
         }
 
+        request.changeSessionId();
         session.setAttribute("loginUser", user);
 
         // 记住我
         if ("on".equals(remember) || "true".equals(remember)) {
-            RememberMeHelper.setRememberMe(response, user.getUsername(), MD5Util.encrypt(password));
+            RememberMeHelper.setRememberMe(request, response, user);
+        } else {
+            RememberMeHelper.clearRememberMe(request, response);
         }
 
         // 跳转

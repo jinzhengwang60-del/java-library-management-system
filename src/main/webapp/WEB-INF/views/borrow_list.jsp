@@ -1,3 +1,4 @@
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
@@ -63,26 +64,7 @@
             </tbody>
         </table>
 
-        <div class="pagination">
-            <c:set var="pn" value="${pageBean.pageNum}"/>
-            <c:set var="tp" value="${pageBean.totalPages}"/>
-
-            <c:choose>
-                <c:when test="${pn > 1}"><a href="?pageNum=${pn-1}">上一页</a></c:when>
-                <c:otherwise><span class="disabled">上一页</span></c:otherwise>
-            </c:choose>
-            <c:forEach var="i" begin="1" end="${tp}">
-                <c:choose>
-                    <c:when test="${i == pn}"><span class="current">${i}</span></c:when>
-                    <c:otherwise><a href="?pageNum=${i}">${i}</a></c:otherwise>
-                </c:choose>
-            </c:forEach>
-            <c:choose>
-                <c:when test="${pn < tp}"><a href="?pageNum=${pn+1}">下一页</a></c:when>
-                <c:otherwise><span class="disabled">下一页</span></c:otherwise>
-            </c:choose>
-            <span style="margin-left:10px; color:#909399;">共 ${pageBean.totalCount} 条</span>
-        </div>
+        <c:set var="paginationPath" value="/borrow/list" scope="request"/><jsp:include page="_pagination.jsp"/>
     </div>
 </div>
 

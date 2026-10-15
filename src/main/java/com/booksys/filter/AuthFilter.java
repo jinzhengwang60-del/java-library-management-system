@@ -83,11 +83,23 @@ public class AuthFilter implements Filter {
         HttpSession session = request.getSession(false);
         User user = (session == null) ? null : (User) session.getAttribute("loginUser");
 
+        if (user != null) {
+            User fresh = new com.booksys.dao.impl.UserDaoImpl().findById(user.getId());
+            if (fresh == null || !Integer.valueOf(1).equals(fresh.getStatus())) {
+                session.invalidate();
+                RememberMeHelper.clearRememberMe(request, response);
+                response.sendRedirect(ctx + "/login.jsp");
+                return;
+            }
+            user = fresh;
+            session.setAttribute("loginUser", fresh);
+        }
         if (user == null) {
             // 检查记住我 cookie
             User remembered = RememberMeHelper.getRememberedUser(request);
             if (remembered != null) {
                 session = request.getSession();
+                request.changeSessionId();
                 session.setAttribute("loginUser", remembered);
                 chain.doFilter(req, resp);
                 return;

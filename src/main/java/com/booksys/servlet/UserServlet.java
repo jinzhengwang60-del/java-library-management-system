@@ -2,6 +2,8 @@ package com.booksys.servlet;
 
 import com.booksys.entity.PageBean;
 import com.booksys.entity.User;
+import com.booksys.util.FormValues;
+import com.booksys.util.ImageStore;
 import com.booksys.service.IUserService;
 import com.booksys.service.impl.UserServiceImpl;
 
@@ -12,10 +14,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import javax.servlet.http.Part;
-import java.io.File;
 import java.io.IOException;
-import java.util.UUID;
 
 /**
  * 用户相关
@@ -68,46 +67,46 @@ public class UserServlet extends HttpServlet {
     private void update(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         HttpSession session = request.getSession(false);
-        User u = (session == null) ? null : (User) session.getAttribute("loginUser");
-        if (u == null) { response.sendRedirect(request.getContextPath() + "/login.jsp"); return; }
-
-        User edit = userService.findById(u.getId());
-        edit.setRealName(request.getParameter("realName"));
-        edit.setEmail(request.getParameter("email"));
-        edit.setPhone(request.getParameter("phone"));
-        edit.setGender(request.getParameter("gender"));
-        edit.setProvince(request.getParameter("province"));
-        edit.setCity(request.getParameter("city"));
-        edit.setDistrict(request.getParameter("district"));
-        edit.setAddress(request.getParameter("address"));
-
-        // 头像上传
+        User current = session == null ? null : (User) session.getAttribute("loginUser");
+        if (current == null) { response.sendRedirect(request.getContextPath() + "/login.jsp"); return; }
+        String uploaded = null;
         try {
-            Part avatarPart = request.getPart("avatarFile");
-            if (avatarPart != null && avatarPart.getSize() > 0) {
-                String fileName = avatarPart.getSubmittedFileName();
-                if (fileName != null && !fileName.isEmpty()) {
-                    String ext = "";
-                    int dot = fileName.lastIndexOf('.');
-                    if (dot > -1) ext = fileName.substring(dot);
-                    String newName = UUID.randomUUID().toString().replace("-", "") + ext;
-                    String uploadDir = request.getServletContext().getRealPath("/upload");
-                    File dir = new File(uploadDir);
-                    if (!dir.exists()) dir.mkdirs();
-                    avatarPart.write(new File(dir, newName).getAbsolutePath());
-                    edit.setAvatar("/upload/" + newName);
-                }
+            User edit = userService.findById(current.getId());
+            if (edit == null) { response.sendError(404); return; }
+            String email = FormValues.text(request.getParameter("email"), "邮箱", 100, false);
+            String phone = FormValues.text(request.getParameter("phone"), "手机", 20, false);
+            if (email != null && !email.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+"))
+                throw new IllegalArgumentException("邮箱格式无效");
+            if (phone != null && !phone.matches("[0-9+() -]{3,20}"))
+                throw new IllegalArgumentException("手机号码格式无效");
+            if (email != null && !java.util.Objects.equals(email, edit.getEmail()) && userService.existsByEmail(email))
+                throw new IllegalArgumentException("邮箱已被使用");
+            if (phone != null && !java.util.Objects.equals(phone, edit.getPhone()) && userService.existsByPhone(phone))
+                throw new IllegalArgumentException("手机号码已被使用");
+            edit.setRealName(FormValues.text(request.getParameter("realName"), "姓名", 50, false));
+            edit.setEmail(email); edit.setPhone(phone);
+            edit.setGender(FormValues.text(request.getParameter("gender"), "性别", 10, false));
+            edit.setProvince(FormValues.text(request.getParameter("province"), "省份", 50, false));
+            edit.setCity(FormValues.text(request.getParameter("city"), "城市", 50, false));
+            edit.setDistrict(FormValues.text(request.getParameter("district"), "区县", 50, false));
+            edit.setAddress(FormValues.text(request.getParameter("address"), "地址", 200, false));
+            uploaded = ImageStore.upload(request, "avatarFile", 2L * 1024 * 1024);
+            if (uploaded != null) edit.setAvatar(uploaded);
+            if (!userService.updateUser(edit)) {
+                ImageStore.discard(uploaded);
+                response.sendError(409, "个人资料已变化，请刷新后重试");
+                return;
             }
-        } catch (Exception ignored) {}
-
-        boolean ok = userService.updateUser(edit);
-        if (ok) {
             session.setAttribute("loginUser", edit);
-            request.getSession().setAttribute("flashMsg", "更新成功");
-        } else {
-            request.getSession().setAttribute("flashMsg", "更新失败");
+            session.setAttribute("flashMsg", "更新成功");
+            response.sendRedirect(request.getContextPath() + "/user/profile");
+        } catch (IllegalArgumentException e) {
+            ImageStore.discard(uploaded);
+            response.sendError(400, e.getMessage());
+        } catch (RuntimeException | IOException e) {
+            ImageStore.discard(uploaded);
+            throw e;
         }
-        response.sendRedirect(request.getContextPath() + "/user/profile");
     }
 
     private void list(HttpServletRequest request, HttpServletResponse response)
@@ -138,7 +137,10 @@ public class UserServlet extends HttpServlet {
         try {
             Integer id = Integer.parseInt(request.getParameter("id"));
             if (!id.equals(u.getId())) {
-                userService.deleteUser(id);
+                if (!userService.deleteUser(id)) {
+                    response.sendError(409, "管理员账号不能停用，或该账号已停用");
+                    return;
+                }
             }
         } catch (NumberFormatException ignored) {}
         response.sendRedirect(request.getContextPath() + "/user/list");

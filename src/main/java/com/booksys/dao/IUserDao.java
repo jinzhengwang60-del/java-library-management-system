@@ -23,8 +23,8 @@ public interface IUserDao {
     /** 根据用户名查询 */
     User findByUsername(String username);
 
-    /** 用于登录校验 */
-    User findByUsernameAndPassword(String username, String password);
+    /** Compare-and-set upgrade of a verified legacy password. */
+    int updatePasswordIfMatch(Integer id, String previous, String replacement);
 
     /** 校验用户名是否已存在 */
     boolean existsByUsername(String username);

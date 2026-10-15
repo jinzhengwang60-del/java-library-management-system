@@ -22,6 +22,7 @@ public class Book {
     private String description;
     private Integer clickCount;
     private Integer status;
+    private Integer version = 0;
     private Timestamp createTime;
 
     public Book() {}
@@ -70,6 +71,9 @@ public class Book {
 
     public Integer getStatus() { return status; }
     public void setStatus(Integer status) { this.status = status; }
+
+    public Integer getVersion() { return version; }
+    public void setVersion(Integer version) { this.version = version; }
 
     public Timestamp getCreateTime() { return createTime; }
     public void setCreateTime(Timestamp createTime) { this.createTime = createTime; }

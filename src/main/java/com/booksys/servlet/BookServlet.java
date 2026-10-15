@@ -1,6 +1,8 @@
 package com.booksys.servlet;
 
 import com.booksys.entity.Book;
+import com.booksys.util.FormValues;
+import com.booksys.util.ImageStore;
 import com.booksys.entity.Category;
 import com.booksys.entity.PageBean;
 import com.booksys.entity.User;
@@ -16,13 +18,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import javax.servlet.http.Part;
-import java.io.File;
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.text.SimpleDateFormat;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * 图书 Servlet（多路由通过 PathInfo 区分）
@@ -140,74 +137,42 @@ public class BookServlet extends HttpServlet {
         request.getRequestDispatcher("/WEB-INF/views/book_edit.jsp").forward(request, response);
     }
 
-    /** 新增/更新 */
+    /** 新增/更新；校验失败不写库，版本不一致不覆盖其他请求的修改。 */
     private void save(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         if (!checkAdmin(request, response)) return;
-
-        String idStr = request.getParameter("id");
-        Book book = new Book();
-        if (idStr != null && !idStr.isEmpty()) {
-            try { book.setId(Integer.parseInt(idStr)); } catch (NumberFormatException ignored) {}
-        }
-        book.setBookNo(request.getParameter("bookNo"));
-        book.setTitle(request.getParameter("title"));
-        book.setAuthor(request.getParameter("author"));
-        book.setPublisher(request.getParameter("publisher"));
-        book.setIsbn(request.getParameter("isbn"));
-        book.setDescription(request.getParameter("description"));
-
-        String publishDateStr = request.getParameter("publishDate");
-        if (publishDateStr != null && !publishDateStr.isEmpty()) {
-            try {
-                book.setPublishDate(new java.sql.Timestamp(new SimpleDateFormat("yyyy-MM-dd").parse(publishDateStr).getTime()));
-            } catch (Exception ignored) {}
-        }
-
-        String cid = request.getParameter("categoryId");
-        if (cid != null && !cid.isEmpty()) {
-            try { book.setCategoryId(Integer.parseInt(cid)); } catch (NumberFormatException ignored) {}
-        }
-
-        String priceStr = request.getParameter("price");
-        if (priceStr != null && !priceStr.isEmpty()) {
-            try { book.setPrice(new BigDecimal(priceStr)); } catch (Exception ignored) {}
-        }
-        String stockStr = request.getParameter("stock");
-        if (stockStr != null && !stockStr.isEmpty()) {
-            try { book.setStock(Integer.parseInt(stockStr)); } catch (NumberFormatException ignored) {}
-        }
-        book.setStatus(1);
-
-        // 文件上传
-        Part filePart = null;
+        String uploaded = null;
         try {
-            filePart = request.getPart("coverFile");
-        } catch (Exception ignored) {}
-
-        if (filePart != null && filePart.getSize() > 0) {
-            String savedPath = saveUpload(request, filePart);
-            if (savedPath != null) book.setCover(savedPath);
-        } else if (book.getId() != null) {
-            // 编辑时保留原 cover
-            Book old = bookService.findById(book.getId());
-            if (old != null) book.setCover(old.getCover());
-        }
-        if (book.getCover() == null) book.setCover("/images/default-book.png");
-
-        boolean ok;
-        if (book.getId() == null) {
-            ok = bookService.addBook(book);
-        } else {
-            ok = bookService.updateBook(book);
-        }
-        if (ok) {
+            Book book = FormValues.book(request);
+            Book previous = book.getId() == null ? null : bookService.findById(book.getId());
+            if (book.getId() != null && previous == null) { response.sendError(404); return; }
+            if (previous != null) {
+                String version = request.getParameter("version");
+                if (version == null || !version.matches("[0-9]{1,10}"))
+                    throw new IllegalArgumentException("编辑页面已过期，请刷新后重试");
+                try { book.setVersion(Integer.parseInt(version)); }
+                catch (NumberFormatException e) { throw new IllegalArgumentException("编辑页面已过期，请刷新后重试"); }
+                book.setCover(previous.getCover());
+            }
+            if (book.getCategoryId() != null && categoryService.findAll().stream()
+                    .noneMatch(category -> book.getCategoryId().equals(category.getId())))
+                throw new IllegalArgumentException("图书分类不存在");
+            uploaded = ImageStore.upload(request, "coverFile", 5L * 1024 * 1024);
+            if (uploaded != null) book.setCover(uploaded);
+            if (book.getCover() == null) book.setCover("/images/default-book.png");
+            boolean saved = book.getId() == null ? bookService.addBook(book) : bookService.updateBook(book);
+            if (!saved) {
+                ImageStore.discard(uploaded);
+                response.sendError(409, "图书信息已变化，请刷新编辑页面后重试");
+                return;
+            }
             response.sendRedirect(request.getContextPath() + "/book/list");
-        } else {
-            request.setAttribute("error", "保存失败");
-            request.setAttribute("book", book);
-            request.setAttribute("categories", categoryService.findAll());
-            request.getRequestDispatcher("/WEB-INF/views/book_edit.jsp").forward(request, response);
+        } catch (IllegalArgumentException e) {
+            ImageStore.discard(uploaded);
+            response.sendError(400, e.getMessage());
+        } catch (RuntimeException | IOException e) {
+            ImageStore.discard(uploaded);
+            throw e;
         }
     }
 
@@ -222,34 +187,7 @@ public class BookServlet extends HttpServlet {
         response.sendRedirect(request.getContextPath() + "/book/list");
     }
 
-    /** 文件保存 */
-    private String saveUpload(HttpServletRequest request, Part part) throws IOException {
-        String originalName = getSubmittedFileName(part);
-        if (originalName == null || originalName.isEmpty()) return null;
-        String ext = "";
-        int dot = originalName.lastIndexOf('.');
-        if (dot > -1) ext = originalName.substring(dot);
-        String newName = UUID.randomUUID().toString().replace("-", "") + ext;
 
-        // 保存到 webapp/upload 目录（运行时即 Tomcat 部署目录下的 upload）
-        String uploadDir = request.getServletContext().getRealPath("/upload");
-        File dir = new File(uploadDir);
-        if (!dir.exists()) dir.mkdirs();
-        File target = new File(dir, newName);
-        part.write(target.getAbsolutePath());
-        return "/upload/" + newName;
-    }
-
-    private String getSubmittedFileName(Part part) {
-        String cd = part.getHeader("content-disposition");
-        if (cd == null) return null;
-        for (String token : cd.split(";")) {
-            if (token.trim().startsWith("filename")) {
-                return token.substring(token.indexOf('=') + 1).trim().replace("\"", "");
-            }
-        }
-        return null;
-    }
 
     private boolean checkAdmin(HttpServletRequest request, HttpServletResponse response) throws IOException {
         HttpSession session = request.getSession(false);
